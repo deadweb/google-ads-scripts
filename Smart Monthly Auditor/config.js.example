@@ -1,0 +1,6 @@
+const CONFIG = {
+  SPREADSHEET_URL: 'https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit',
+  LABEL_NAME: 'Smart_Monthly_Auditor',
+  INCLUDE_VAT: true,
+  VAT_RATE: 1.2
+};
