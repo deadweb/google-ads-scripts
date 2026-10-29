@@ -62,7 +62,7 @@ function processAccountSheet(sheet, includeVat, vatRate) {
   var report = AdsApp.report(
     'SELECT segments.month, metrics.conversions, metrics.conversions_value, metrics.cost_micros ' +
     'FROM customer ' +
-    'WHERE segments.date ≥ "2000-01-01" AND segments.date ≤ "3000-12-31" ' +
+    'WHERE segments.date=> "2000-01-01" AND segments.date <="3000-12-31" ' +
     'ORDER BY segments.month ASC'
   );
 
