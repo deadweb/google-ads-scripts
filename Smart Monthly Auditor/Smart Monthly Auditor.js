@@ -1,7 +1,7 @@
 /**
  * Name: Smart Monthly Auditor
- * Version: 1.0.0
- * Description: Виводить кількість конверсій і витрати (без ПДВ) для вказаних акаунтів в таблицю Google Sheets.
+ * Version: 1.1.0
+ * Description: Виводить кількість конверсій, витрати (з/без ПДВ) та частку показів для вказаних акаунтів в таблицю Google Sheets.
  */
 
 function main() {
@@ -56,13 +56,14 @@ function processAccountSheet(sheet, includeVat, vatRate) {
   sheet.getRange("B1").setValue("Конверсії");
   sheet.getRange("C1").setValue("Цінність конв.");
   sheet.getRange("D1").setValue(costHeader);
-  sheet.getRange("A1:D1").setFontWeight("bold");
+  sheet.getRange("E1").setValue("Частка показів");
+  sheet.getRange("A1:E1").setFontWeight("bold");
 
-  // Запит даних
+  // Запит даних (додано metrics.search_impression_share)
   var report = AdsApp.report(
-    'SELECT segments.month, metrics.conversions, metrics.conversions_value, metrics.cost_micros ' +
+    'SELECT segments.month, metrics.conversions, metrics.conversions_value, metrics.cost_micros, metrics.search_impression_share ' +
     'FROM customer ' +
-    'WHERE segments.date=> "2000-01-01" AND segments.date <="3000-12-31" ' +
+    'WHERE segments.date >= "2000-01-01" AND segments.date <= "3000-12-31" ' +
     'ORDER BY segments.month ASC'
   );
 
@@ -78,20 +79,32 @@ function processAccountSheet(sheet, includeVat, vatRate) {
     var convValue = parseFloat(row['metrics.conversions_value']);
     var rawCost = parseFloat(row['metrics.cost_micros']) / 1000000;
     
+    // Обробка частки показів (якщо значення відсутнє/менше 10%/недоступне — виводимо 0)
+    var rawImpressionShare = row['metrics.search_impression_share'];
+    var impressionShare = 0;
+    if (rawImpressionShare && rawImpressionShare !== '--' && rawImpressionShare !== '< 0.1') {
+      impressionShare = parseFloat(rawImpressionShare) / 100;
+    } else if (rawImpressionShare === '< 0.1') {
+      impressionShare = 0.05; // Фіксоване приблизне значення для значень <10%
+    }
+    
     // Розрахунок витрат з ПДВ або без
     var finalCost = includeVat ? (rawCost * vatRate) : rawCost;
 
-    output.push([displayMonth, conversions, convValue, finalCost]);
+    output.push([displayMonth, conversions, convValue, finalCost, impressionShare]);
   }
 
   // Запис та форматування
   if (output.length > 0) {
-    var range = sheet.getRange(2, 1, output.length, 4);
+    var range = sheet.getRange(2, 1, output.length, 5);
     range.setValues(output);
     
     // Формат з комою для стовпців B, C, D
     sheet.getRange(2, 2, output.length, 3).setNumberFormat("#,##0.00");
+    
+    // Формат відсотків для стовпця E (Частка показів)
+    sheet.getRange(2, 5, output.length, 1).setNumberFormat("0.00%");
   }
   
-  sheet.getRange("A:D").setHorizontalAlignment("left");
+  sheet.getRange("A:E").setHorizontalAlignment("left");
 }
